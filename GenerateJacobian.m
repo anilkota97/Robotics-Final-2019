@@ -14,7 +14,7 @@ Pe = Tmat(1:3,4,end);
 
 for i = 1:length(joints)
     %Check if the joint is prismatic
-    if(joints(i) == 'P' || joints(i) == 'p')
+    if(strcmpi(joints(i),'p'))
         if(i == 1)
             Zcomp = [0;0;1];
         else
@@ -23,7 +23,7 @@ for i = 1:length(joints)
         %Fill in the Jacobian
         J(:,i) = [Zcomp;0;0;0];
     %Revolute Joints
-    elseif(joints(i) == 'R' || joints(i) == 'r')
+    elseif(strcmpi(joints(i),'r'))
         
         %Find the P and the Z components
         if(i == 1)
