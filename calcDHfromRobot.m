@@ -1,31 +1,66 @@
-function [a,d,alpha,theta] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis)
+function [symDH] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis)
 %UNTITLED12 Calculate DH parameters from Robot parameters
-%   Detailed explanation goes here
+%   Goes from the base joint to the end effector
 
-%Display a reference frame and take input of the z axis about the reference
-%frame
+%Maybe we need to ask for the link direction as well? This will help
+%fetermine o_i and o_i prime so that a and d can be determined more easily.
+%If we know the link Direction, o_i is the current zAxis coordinate, and
+%o_i prime is the curent z coordinate - linkLength*linkDirection. This can
+%also help with directly calculating the layout of the robot, which will
+%help find o_i and _i prime
 
 
 
-%figure(1)
+
+%Assign the variables to symbolic parameters
+symThetas = sym('Theta',[1, numJoints-1]);
+symThetas = transpose(symThetas);
+symD = sym('D',[1,numJoints-1]);
+symD = transpose(symD);
+%Create a symbollic DH matrix
+symA = sym('a',[1 numJoints-1]);
+symA = transpose(symA);
+symAlpha = sym('alpha', [1 numJoints-1]);
+symAlpha = transpose(symAlpha);
+
+
+symDH = [symA symD symAlpha symThetas];
+
+ 
+
+        
+% d = zeros(numJoints-1,1);
+% a = zeros(numJoints-1,1);
+% alpha = zeros(numJoints-1, 1);
+% theta = zeros(numJoints-1, 1);
+
 %Calculate the parameters for each link
 for i = 1:numJoints
     
-    if( i == 1)
+    %For the first joint, there is no previous values yet, so it needs to
+    %be handled separetly.
+    if(i == 1)
         %Assign the initial X, Y, Z based on the first value
         Z_i = zAxis(:,1,1);
         
         %Take the previous Z vector to be the unit vector in the Z
         %direction
         prevZ = [0;0;1];
-
         prevX = [1;0;0];
         prevY = [0;1;0];
     else
         
+        %Assign the z axis vector
         z_i = zAxis(:,:,i);
+        
+        fprintf('The Z axis is:\n')
+        disp(z_i)
+        
         %Find the common normal
         cn = cross(z_i,prevZ);
+        
+        fprintf('The common normal is:\n')
+        disp(cn)
         
         %Check if the z axis are parallel
         if(sum(cn) == 0)
@@ -36,6 +71,10 @@ for i = 1:numJoints
             %joint i to i+1
             x_i = cn;
         end
+        
+        fprintf('The X axis was assigned to be:\n')
+        disp(x_i)
+        
         %Find Y_i
         y_i = cross(z_i,x_i);
         
@@ -49,39 +88,68 @@ for i = 1:numJoints
             %If the axes are not parallel, o_i is located at the current
             %joint, and O_i prime is located at the previos joint. This
             %means that a is the distance between the joints.
-            a(i-1) = linkLengths(i);
+            
+            symDH = subs(symDH,symDH(i-1,1),linkLengths(i));
         else
-            a(i-1) = linkLengths(i);
+            
+            symDH = subs(symDH, symDH(i-1,1),linkLengths(i));
         end
+        
+        fprintf('A was assigned to be: \n')
+        disp(symDH(i-1,1))
+        
         
         %Need to check this logic for finding the values of d, I am not
         %sure if it is entirely correct
-        if(sum(cn) == 0)
-            d(i-1) = 0;
+        if(jointTypes(i-1) == 'P')
+            
+            %since it is already a variable, Don't assign a value
+            %continue
+            
+            
+        elseif(sum(cn) == 0)
+            
+            symDH = subs(symDH,symDH(i-1,2),0);
         else
-            d(i-1) = linkLengths(i);
+            
+            symDH = subs(symDH,symDH(i-1,2),linkLengths(i));
         end
             
+        fprintf('D was assigned to be: \n')
+        disp(symDH(i-1,2))
                 
-%----------------Finding Alpha        
-        %Calculate the cosine of the angle between two vectors
-        ca = (dot(z_i,prevZ))/(sqrt(sum(z_i.^2))*sqrt(sum(prevZ.^2)));
-        %Find the angle between two vectors
-        alpha(i-1) = acosd(ca);
+%----------------Finding Alpha
+        %alpha is zero if the axes are parallel
+        if(z_i == zAxis(i-1))
+            symDH = subs(symDH,symDH(i-1,3),0);
+            
+        else
+            %Calculate the cosine of the angle between two vectors
+            ca = (dot(z_i,prevZ))/(sqrt(sum(z_i.^2))*sqrt(sum(prevZ.^2)));
+            %Find the angle between two vectors
+            
+            symDH = subs(symDH,symDH(i-1,3),acosd(ca));
+        end
+        
+        fprintf('Alpha was assigned to be: %d\n', symDH(i-1,3))
         
 
 %----------------Finding Theta        
         %Theta will be zero for all prismatic joints, and a variable for
         %all revolute joints
-        if(jointTypes(i) == 'P')
+        if(jointTypes(i-1) == 'P')
             %Set to zero because prismatic
-            theta(i-1) = 0;
+            
+            symDH = subs(symDH,symDH(i-1,4),0);
         else
-            %Revolute joints
-            ct = (dot(x_i,prevx))/(sqrt(sum(x_i.^2))*sqrt(sum(prevx.^2)));
-            theta(i-1) = acosd(ct);            
+            %Revolute joints, therefore it is a variable
+            
+            %Since the DH table is already a symbolic variable, leave it
+            %continue
         end
         
+        fprintf('Theta was chosen to be: \n')
+        disp(symDH(i-1,4));
         
         %Update the previous values with the new values
         prevZ = z_i;
