@@ -1,6 +1,24 @@
-function [symDH] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis)
+function [symDH] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis, linkDir)
 %UNTITLED12 Calculate DH parameters from Robot parameters
-%   Goes from the base joint to the end effector
+%   Takes input from the base frame to the end effector from. The base
+%   frame is taken as co-incidental with the frame of the first joint.
+%   Inputs: 
+%         : Zaxis - The Z Axis of the joints. For revolute joints it is the
+%                   axis of rotation, For prismatic joints it is the axis
+%                   of translations. Runs from first joint to the end
+%                   effector (inclusive)
+%         : jointTypes - The types of joints, From the first joint to the
+%                        end effector (inclusive)
+%         : linkLengths - The length of the links between the joints, Only
+%                         number of links
+%         : numJoints - The number of joints in the system, runs from the
+%                       first joint to the end effector (inclusive)
+%         : linkDir - The direction of the links between the joints. From
+%                     first joint to the end effector (inclusive). Only the
+%                     number of links
+%
+%   Outputs:
+%          : Outputs a DH table with symbols in the place of the variables
 
 %Maybe we need to ask for the link direction as well? This will help
 %fetermine o_i and o_i prime so that a and d can be determined more easily.
@@ -26,13 +44,6 @@ symAlpha = transpose(symAlpha);
 
 symDH = [symA symD symAlpha symThetas];
 
- 
-
-        
-% d = zeros(numJoints-1,1);
-% a = zeros(numJoints-1,1);
-% alpha = zeros(numJoints-1, 1);
-% theta = zeros(numJoints-1, 1);
 
 %Calculate the parameters for each link
 for i = 1:numJoints
@@ -50,65 +61,115 @@ for i = 1:numJoints
         prevY = [0;1;0];
     else
         
-        %Assign the z axis vector
+%-------Assign the z axis vector
         z_i = zAxis(:,:,i);
         
         fprintf('The Z axis is:\n')
         disp(z_i)
         
-        %Find the common normal
+%-------Find the common normal
         cn = cross(z_i,prevZ);
         
         fprintf('The common normal is:\n')
         disp(cn)
         
-        %Check if the z axis are parallel
+%-------Find the X axis
         if(sum(cn) == 0)
-            %Assign an arbitrary x_i
+            %Assign an arbitrary x_i for parallel z axis
             x_i = [1;0;0];
         else
             %X is defined along the common normal, with direction from
             %joint i to i+1
             x_i = cn;
+            %multiply by the sign of the of the link to go from joint i to
+            %i+1
+            x_i = x_i.*sign(linkDir(i));
+            
         end
         
         fprintf('The X axis was assigned to be:\n')
         disp(x_i)
         
-        %Find Y_i
+%-------Find Y_i
         y_i = cross(z_i,x_i);
         
         
-%----------------Finding O_i and O_i prime
-        %O_i is located at the intersection of z_i with the common normal
-        %of z_i and z_i-1
-        %If neither of the common normals are parallel to the Z axis or z-1
-        %axis
-        if(sum(cross(cn,z_i))~= 0 && sum(cross(cn,prevZ)) ~= 0)
-            %If the axes are not parallel, o_i is located at the current
-            %joint, and O_i prime is located at the previos joint. This
-            %means that a is the distance between the joints.
-            
-            symDH = subs(symDH,symDH(i-1,1),linkLengths(i));
+% %----------------Finding O_i and O_i prime
+%         %O_i is located at the intersection of z_i with the common normal
+%         %of z_i and z_i-1
+%         %If neither of the common normals are parallel to the Z axis or z-1
+%         %axis
+%         if(jointTypes(i-1) == 'P')
+%             symDH = subs(symDH,symDH(i-1,1),0);
+%             
+%         elseif(sum(cross(cn,z_i))~= 0 && sum(cross(cn,prevZ)) ~= 0)
+%             %If the axes are not parallel, o_i is located at the current
+%             %joint, and O_i prime is located at the previos joint. This
+%             %means that a is the distance between the joints.
+%             
+%             symDH = subs(symDH,symDH(i-1,1),linkLengths(i));
+%         else
+%             
+%             symDH = subs(symDH, symDH(i-1,1),linkLengths(i));
+%         end
+%         
+%         fprintf('A was assigned to be: \n')
+%         disp(symDH(i-1,1))
+        
+%-------Calculating a
+        tempLinkDir = linkDir(:,:,i-1);
+        if(jointTypes(i-1) == 'P')
+            %If the joint is prismatic, the value of a should be zero
+            %because the dh table should have the value in d instead
+            symDH = subs(symDH,symDH(i-1,1),0);
+        elseif(tempLinkDir(1) ~= 0)
+            %Substitute in the value of a if the distance along the xi axis
+            %is not equal to zero.
+            symDH = subs(symDH,symDH(i-1,1),linkLengths(i-1));
         else
-            
-            symDH = subs(symDH, symDH(i-1,1),linkLengths(i));
+            symDH = subs(symDH,symDH(i-1,1),0);
         end
         
         fprintf('A was assigned to be: \n')
-        disp(symDH(i-1,1))
+        disp(symDH(i-1,1))        
         
         
-        %Need to check this logic for finding the values of d, I am not
-        %sure if it is entirely correct
+        
+        
+%-------Finding the values of d
+        tempLinkDir2 = linkDir(:,:,i-1);
         if(jointTypes(i-1) == 'P')
             
             %since it is already a variable, Don't assign a value
             %continue
-            
+            %Check the sign
+            temp = sign(tempLinkDir2(3));
+            temp2 = temp*symDH(i-1,2);
+            %subs(symDH,symDH(i-1,2),temp*symDH(i-1,2)); 
+            symDH(i-1,2) = temp2;
+
+        elseif(tempLinkDir2(3) ~= 0)
+            %symDH = subs(symDH,symDH(i-1,2),linkLengths(i-1));
+            %Since it is already a variable, don't assign and value and
+            %simply continue
+            %Check the direction first
+            if(jointTypes(i-1) == 'R')
+                temp = -1;% sign(tempLinkDir2(3));
+                fprintf('%d\n',temp);
+                temp2 = temp*linkLengths(i-1);
+                fprintf('%d\n',temp2);
+                disp(symDH)
+                %subs(symDH,symDH(i-1,2),temp2);
+                symDH(i-1,2) = temp2;
+                disp(symDH)
+            else
+                temp = sign(tempLinkDir2(3));
+                temp2 = temp*symDH(i-1,2);
+                subs(symDH,symDH(i-1,2),temp2);                
+            end
             
         elseif(sum(cn) == 0)
-            
+            %If the common normal is zero, d should be zero
             symDH = subs(symDH,symDH(i-1,2),0);
         else
             
@@ -127,7 +188,7 @@ for i = 1:numJoints
             %Calculate the cosine of the angle between two vectors
             ca = (dot(z_i,prevZ))/(sqrt(sum(z_i.^2))*sqrt(sum(prevZ.^2)));
             %Find the angle between two vectors
-            
+            tempangle = acosd(ca);
             symDH = subs(symDH,symDH(i-1,3),acosd(ca));
         end
         
@@ -158,77 +219,7 @@ for i = 1:numJoints
         
         
     end
-%     if(i == 1)
-%         %Initialize the origin
-%         %prevx = [1;0;0];
-%         %prevy = [0;1;0];
-%         %prevz = [0;0;1];
-%         %prevo = [0;0;0];
-%         %Plot the first frame
-%         %Plot the origin
-% %         origin = [0,0,0];
-% %         plot3(origin(1),origin(2),origin(3),'r*')
-% %         grid on
-% %         hold on
-% %         
-% %         %This behavior is incorrect, I want to move along the defined
-% %         %z-axis
-% %         newOrigin = origin;
-% %         newOrigin(3) = newOrigin(3)+linkLengths(i);
-% %         plot3(newOrigin(1), newOrigin(2), newOrigin(3),'b*')
-% %         plot3([origin(1) prevx(1)], [origin(2) prevx(2)], [origin(3) prevx(3)],'b')
-% %         plot3([origin(1) prevy(1)], [origin(2) prevy(2)], [origin(3) prevy(3)],'b')
-% %         plot3([origin(1) prevz(1)], [origin(2) prevz(2)], [origin(3) prevz(3)],'b')
-%         
-%     else
-%         %Find x_i
-%         z_i = zAxis(:,:,i);
-%         %have to take care of case when zi and zi-1 are parallel
-%         x_i = cross(z_i,prevz);
-%         %Take care of if the z Axis vectors are parallel
-%         if(sum(x_i) == 0)
-%             x_i = [1;0;0];
-%         end
-%         y_i = cross(z_i,x_i);
-%         
-%         %Migrate the frames
-% %         newOrigin(3) = prevz(3) + linkLengths(i);
-% %         plot3(newOrigin(1),newOrigin(2),newOrigin(3),'g*')
-% %         plot3([newOrigin(1) x_i(1)], [newOrigin(2) x_i(2)], [newOrigin(3) x_i(3)],'g')
-% %         plot3([newOrigin(1) y_i(1)], [newOrigin(2) y_i(2)], [newOrigin(3) y_i(3)],'g')
-% %         plot3([newOrigin(1) z_i(1)], [newOrigin(2) z_i(2)], [newOrigin(3) z_i(3)],'g')        
-%         
-%         %Finding theta
-%         if(jointTypes(i) == 'P')
-%             theta(i-1) = 0;
-%         else
-%             ct = (dot(x_i,prevx))/(sqrt(sum(x_i.^2))*sqrt(sum(prevx.^2)));
-%             theta(i-1) = acosd(ct);
-%         end
-%         
-%         %Finding alpha
-%         ca = (dot(z_i,prevz))/(sqrt(sum(z_i.^2))*sqrt(sum(prevz.^2)));
-%         alpha(i-1) = acosd(ca);
-%         
-%         
-%         %Find o_i: Intersection of zi, and the common normals of zi and
-%         %zi-1
-%         cn = cross(z_i,prevz);
-%         
-%         %Z axis are parallel
-%         if(sum(cn) == 0)
-%             o_i_prime = prevo;
-%             o_i = prevo + z_i(i);
-%             a(i-1) = linkLengths(i);
-%         else
-%             
-%         end
-%            
-%         
-%         prevx = x_i;
-%         prevz = z_i(i);
-%         prevy = y_i;
-%     end
+
 
 end
 

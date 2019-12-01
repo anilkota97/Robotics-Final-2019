@@ -8,6 +8,9 @@ function [outputArg1,outputArg2] = forwardDiffKin(a, d, alpha, theta, jointTypes
 %Generate the Jacobian matrix from the transforms
 [J, symJ] = GenerateJacobian(T,jointTypes, symTmat);
 
+%Store the J matrix
+Jold = J;
+
 %Make the matrix square
 temp = size(J);
 numCol = temp(2);
@@ -53,7 +56,7 @@ tempsym = det(symJ);
 
 %Find the end effector velocity
 %calculates the end effector linear and rotational velocity
-Ve = J*jointVel;
+Ve = Jold*jointVel;
 
 
 end
