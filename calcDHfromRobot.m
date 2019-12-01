@@ -20,7 +20,12 @@ function [symDH] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis, li
 %   Outputs:
 %          : Outputs a DH table with symbols in the place of the variables
 
-
+%Maybe we need to ask for the link direction as well? This will help
+%fetermine o_i and o_i prime so that a and d can be determined more easily.
+%If we know the link Direction, o_i is the current zAxis coordinate, and
+%o_i prime is the curent z coordinate - linkLength*linkDirection. This can
+%also help with directly calculating the layout of the robot, which will
+%help find o_i and _i prime
 
 
 
@@ -71,7 +76,14 @@ for i = 1:numJoints
 %-------Find the X axis
         if(sum(cn) == 0)
             %Assign an arbitrary x_i for parallel z axis
-            x_i = [1;0;0];
+            %x_i = [1;0;0];
+            if(z_i(:,3,i) ~= 0)
+                x_i = [1;0;0];
+            elseif(z_i(:,2,i) ~= 0)
+                x_i = [1;0;0];
+            elseif(z_i(:,1,i) ~= 0)
+                x_i = [0;0;1];
+            end
         else
             %X is defined along the common normal, with direction from
             %joint i to i+1
