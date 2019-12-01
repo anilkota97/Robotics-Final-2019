@@ -67,11 +67,11 @@ for i = 1:numJoints
         if(sum(cn) == 0)
             %Assign an arbitrary x_i for parallel z axis
             %x_i = [1;0;0];
-            if(z_i(:,3,i) ~= 0)
+            if(z_i(3) ~= 0)
                 x_i = [1;0;0];
-            elseif(z_i(:,2,i) ~= 0)
+            elseif(z_i(2) ~= 0)
                 x_i = [1;0;0];
-            elseif(z_i(:,1,i) ~= 0)
+            elseif(z_i(1) ~= 0)
                 x_i = [0;0;1];
             end
         else
