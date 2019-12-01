@@ -1,13 +1,13 @@
 clc; close all;
 disp('Enter the following in matrix form:');
-fprintf('\n\t(Note: Enter the initial configuration of the arm\n\t DO NOT ENTER CONSTANTS OR VARIABLES AS SYMBOLS!)\n');
-a = [3 3 0 0];%input('Enter the "a" values of the DH parameter table: ');
-d = [0 0 2 3];%input('Enter the "d" values of the DH parameter table: ');
-alpha = [0 pi pi 0];%input('Enter the "\alpha" values of the DH parameter table: ');
-theta = [pi/4 pi/2 0 -pi];%input('Enter the "\theta" values of the DH parameter table: ');
-ll = [3 3 0 3];%input('Enter the link lengths of the arm: ');
-q_mins = [-pi -pi/2 0 -pi];%input('Enter the "\theta" values of the DH parameter table: ');
-q_maxes = [pi pi/2 5 pi];%input('Enter the "\theta" values of the DH parameter table: ');
+fprintf('\n\t(Note: Enter the initial configuration of the arm\n\t DO NOT ENTER VARIABLES AS SYMBOLS!)\n');
+a = [3 3 3];%input('Enter the "a" values of the DH parameter table: ');
+d = [0 0 0];%input('Enter the "d" values of the DH parameter table: ');
+alpha = [0 0 0];%input('Enter the "\alpha" values of the DH parameter table: ');
+theta = [45 30 10];%input('Enter the "\theta" values of the DH parameter table: ');
+ll = [3 3 3];%input('Enter the link lengths of the arm: ');
+q_mins = [-90 0 0];%input('Enter the "\theta" values of the DH parameter table: ');
+q_maxes = [90 0 0];%input('Enter the "\theta" values of the DH parameter table: ');
 workspace(a,d,alpha,theta,q_mins,q_maxes,ll,'draw');
 
 function workspace(a,d,alpha,theta,qmins,qmaxes,linklens,ret_type)
@@ -55,8 +55,8 @@ else
     if strcmpi(ret_type,'draw')
         grid on; hold on;
         plot3(0,0,0,'r*','LineWidth',3);hold on;
-        plot3(X_Coordinates,Y_Coordinates,Z_Coordinates,'k*','LineWidth',3);
-%        comet3(X_Coordinates,Y_Coordinates,Z_Coordinates);
+        plot3(X_Coordinates,Y_Coordinates,Z_Coordinates,'k*','LineWidth',2);
+        %comet3(X_Coordinates,Y_Coordinates,Z_Coordinates);
         xlabel('X-AXIS');ylabel('Y-AXIS');zlabel('Z-AXIS');
         title('WORKSPACE OF THE MANIPULATOR / ARM');
         legend('Base of the arm','Workspace of the manipulator / arm');
@@ -81,16 +81,18 @@ elseif isempty(linklen)
     disp('The matrix containing link lengths is empty !!');
 else
     resolution = 0.1; Jl = get_type_of_joints(dh_tab);
-    qminsi = size(qmin); qmaxs = size(qmax);
+    qminsi = size(qmin); qmaxs = size(qmax); sum_of_logic = 0;
     if qminsi(1,1) == 1
         qmin = qmin';
     elseif qmaxs(1,1) == 1
         qmax = qmax';
     end
     if length(qmin(:,1)) == length(qmax(:,1))
+        q = qmin; max_pos_not_reached = true;
+        dh_tab = update_dh(dh_tab,q,Jl,linklen);
         [x,y,z] = get_coordinates(dh_tab);
-        ws = [x y z]; count = 1; q = qmin;
-        while count <= length(min(qmin):1:max(qmax))
+        ws = [x y z];
+        while max_pos_not_reached
             for i = 1:1:length(q)
                 if q(i,1)+resolution <= qmax(i,1)
                     q(i,1) = q(i,1)+resolution;
@@ -103,8 +105,18 @@ else
             dh_tab = update_dh(dh_tab,q,Jl,linklen);
             [x,y,z] = get_coordinates(dh_tab);
             ws = [ws;x y z];
-            count = count + 1;
+            truth_mat = q(i,1) >= qmax(i,1);
+            for i = 1:1:length(truth_mat)
+                sum_of_logic = sum_of_logic + truth_mat(i,1);
+            end
+            if sum_of_logic >= length(truth_mat)
+                max_pos_not_reached = false;
+            else
+                max_pos_not_reached = true;
+            end
         end
+    else
+        disp('The dimension of minimum joint angle/distance matrix must equal the dimension of maximum joint angle/distance matrix !!');
     end
 end
 end
@@ -126,17 +138,15 @@ else
         theta = theta';
     end
     % Calculating the Transformation matrix
-    for i = 1:length(theta)
-        A{i} = [[cos(theta(i)) -(sin(theta(i))*cos(alpha(i))) (sin(theta(i))*sin(alpha(i))) (a(i)*cos(theta(i)))];
-            [sin(theta(i)) (cos(theta(i))*cos(alpha(i))) -(cos(theta(i))*sin(alpha(i))) (a(i)*sin(theta(i)))];
-            [0 sin(alpha(i)) cos(alpha(i)) d(i)];
-            [0 0 0 1]];
+    for i = 1:1:length(theta)
+        A{i} = [[cosd(theta(i)) -(sind(theta(i))*cosd(alpha(i))) (sind(theta(i))*sind(alpha(i))) (a(i)*cosd(theta(i)))];
+                [sind(theta(i)) (cosd(theta(i))*cosd(alpha(i))) -(cosd(theta(i))*sind(alpha(i))) (a(i)*sind(theta(i)))];
+                [0 sind(alpha(i)) cosd(alpha(i)) d(i)];
+                [0 0 0 1]];
     end
-    T = eye(length(A{1}));
-    for i = 1:1:length(A)
-        T = T*A{i};
+    for i = 1:1:length(A)-1
+        T = A{i}*A{i+1};
     end
-    disp(T);
     %Extracting the coordinates
     X = T(1,end);
     Y = T(2,end);
@@ -172,55 +182,7 @@ else
         if strcmpi(Jl(i,1),'R')
             theta(i,1) = q(i,1);
         elseif strcmpi(Jl(i,1),'P')
-            if alpha(i,1) ~= 0
-                if i-1 >= 1
-                    if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                        a(i,1) = q(i,1) + link_lens(i,1);
-                    elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                        d(i,1) = q(i,1) + link_lens(i,1);
-                    end
-                elseif i == 0
-                    if i+1 < length(Jl)
-                        if alpha(i+1,1) ~= 0
-                            if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                                a(i,1) = q(i,1) + link_lens(i,1);
-                            elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                                d(i,1) = q(i,1) + link_lens(i,1);
-                            end
-                        elseif alpha(i+1,1) == 0
-                            if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                                d(i,1) = q(i,1) + link_lens(i,1);
-                            elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                                a(i,1) = q(i,1) + link_lens(i,1);
-                            end
-                        end
-                    end
-                end
-            elseif alpha(i,1) == 0
-                if i-1 >= 1
-                    if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                        d(i,1) = q(i,1) + link_lens(i,1);
-                    elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                        a(i,1) = q(i,1) + link_lens(i,1);
-                    end
-                elseif i-1 < 1
-                    if i+1 < length(Jl)
-                        if alpha(i+1,1) ~= 0
-                            if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                                d(i,1) = q(i,1) + link_lens(i,1);
-                            elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                                a(i,1) = q(i,1) + link_lens(i,1);
-                            end
-                        elseif alpha(i+1,1) == 0
-                            if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                                a(i,1) = q(i,1) + link_lens(i,1);
-                            elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                                d(i,1) = q(i,1) + link_lens(i,1);
-                            end
-                        end
-                    end
-                end
-            end
+            d(i,1) = (cos(alpha(i,1)))*(q(i,1) + link_lens(i,1));
         end
     end
 end

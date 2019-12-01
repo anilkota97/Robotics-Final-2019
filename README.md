@@ -75,3 +75,7 @@ iv) z axis: Steps:  User input ----> vector form input with respect to the refer
 
 #### g) Inverse differential kinematics and inverse kinematics using Jacobians: <br />
 Homework4 problem: user should give (pd and phid)
+
+#### i) Manipulator control: <br />
+1) Operational space motion control (Inverse Dynamics Model)
+2) Indirect force control via compliance control 
