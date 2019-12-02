@@ -1,13 +1,13 @@
 clc; close all;
 disp('Enter the following in matrix form:');
 fprintf('\n\t(Note: Enter the initial configuration of the arm\n\t DO NOT ENTER CONSTANTS OR VARIABLES AS SYMBOLS!)\n');
-a = [3 3 3];%input('Enter the "a" values of the DH parameter table: ');
-d = [0 0 0];%input('Enter the "d" values of the DH parameter table: ');
-alpha = [0 0 0];%input('Enter the "\alpha" values of the DH parameter table: ');
-theta = [pi/2 pi/4 pi/6];%input('Enter the "\theta" values of the DH parameter table: ');
-ll = [3 3 0 3];%input('Enter the link lengths of the arm: ');
-q_mins = [-pi/2 -pi/4 -pi/6];%input('Enter the "\theta" values of the DH parameter table: ');
-q_maxes = [pi/2 pi/4 pi/6];%input('Enter the "\theta" values of the DH parameter table: ');
+a = input('Enter the "a" values of the DH parameter table: ');
+d = input('Enter the "d" values of the DH parameter table: ');
+alpha = input("Enter the '\alpha' values of the DH parameter table: ");
+theta = input("Enter the '\theta' values of the DH parameter table: ");
+ll = input('Enter the link lengths of the arm: ');
+q_mins = input("Enter the minimum joint angle / distance matrix: ");
+q_maxes = input("Enter the maximum joint angle / distance matrix: ");
 workspace(a,d,alpha,theta,q_mins,q_maxes,ll,'draw');
 
 function workspace(a,d,alpha,theta,qmins,qmaxes,linklens,ret_type)
@@ -54,9 +54,9 @@ else
     X_Coordinates = ws_mat(:,1); Y_Coordinates = ws_mat(:,2); Z_Coordinates = ws_mat(:,3);
     if strcmpi(ret_type,'draw')
         grid on; hold on;
-        plot3(0,0,0,'r*','LineWidth',3);hold on;
+        scale = 1; [xc, yc, zc] = sphere();
+        surface(scale.*xc, scale.*yc, scale.*zc,'EdgeColor','none','FaceColor','red');
         plot3(X_Coordinates,Y_Coordinates,Z_Coordinates,'k*','LineWidth',3);
-%        comet3(X_Coordinates,Y_Coordinates,Z_Coordinates);
         xlabel('X-AXIS');ylabel('Y-AXIS');zlabel('Z-AXIS');
         title('WORKSPACE OF THE MANIPULATOR / ARM');
         legend('Base of the arm','Workspace of the manipulator / arm');
@@ -80,7 +80,7 @@ elseif isempty(qmax)
 elseif isempty(linklen)
     disp('The matrix containing link lengths is empty !!');
 else
-    resolution = 0.1; Jl = get_type_of_joints(dh_tab);
+    resolution = 10; Jl = get_type_of_joints(dh_tab);
     qminsi = size(qmin); qmaxs = size(qmax);
     if qminsi(1,1) == 1
         qmin = qmin';
@@ -89,8 +89,7 @@ else
     end
     if length(qmin(:,1)) == length(qmax(:,1))
         [X,Y,Z] = get_coordinates_equations(dh_tab);
-        [x,y,z] = get_coordinates(dh_tab,X,Y,Z);
-        ws = [x y z]; count = 1; q = qmin;
+        ws = []; count = 1; q = qmin;
         for s = 1:1:length(qmin)
             while count <= length(min(qmin):1:max(qmax))
                 for i = s:1:length(q)
@@ -191,9 +190,9 @@ else
     sym_theta = sym('theta',[length(theta),1],'rational');
     % Calculating the Transformation matrix
     for i = 1:1:length(sym_theta)
-        A{i} = [[cos(sym_theta(i)) -(sin(sym_theta(i))*cos(sym_alpha(i)))  (sin(sym_theta(i))*sin(sym_alpha(i))) (sym_a(i)*cos(sym_theta(i)))];
-                [sin(sym_theta(i))  (cos(sym_theta(i))*cos(sym_alpha(i))) -(cos(sym_theta(i))*sin(sym_alpha(i))) (sym_a(i)*sin(sym_theta(i)))];
-                [0 sin(sym_alpha(i)) cos(sym_alpha(i)) sym_d(i)];
+        A{i} = [[cosd(sym_theta(i)) -(sind(sym_theta(i))*cosd(sym_alpha(i)))  (sind(sym_theta(i))*sind(sym_alpha(i))) (sym_a(i)*cosd(sym_theta(i)))];
+                [sind(sym_theta(i))  (cosd(sym_theta(i))*cosd(sym_alpha(i))) -(cosd(sym_theta(i))*sind(sym_alpha(i))) (sym_a(i)*sind(sym_theta(i)))];
+                [0 sind(sym_alpha(i)) cosd(sym_alpha(i)) sym_d(i)];
                 [0 0 0 1]];
     end
     for i = 1:1:length(A)-1
@@ -206,87 +205,43 @@ else
 end
 end
 
-function new_dh = update_dh(old_dh,q,Jl,link_lens)
+function new_dh = update_dh(old_dh, q, Jl, linklens)
 if isempty(old_dh)
     disp('The matrix containing DH Parameters is empty !!');
 elseif isempty(q)
     fprintf('\nThe matrix containing updating q is empty !!\nError in minimum and maximum joint angles/distances !!\n');
-elseif isempty(link_lens)
+elseif isempty(linklens)
     disp('The matrix containing link lengths is empty !!');
 else
-    a = old_dh(:,1); d = old_dh(:,1);
+    a = old_dh(:,1); d = old_dh(:,2);
     alpha = old_dh(:,3); theta = old_dh(:,4);
     sa = size(a);sd = size(d);
     sal = size(alpha);st = size(theta);
-    sll = size(link_lens);
+    sll = size(linklens);
     if sa(1,1) == 1
         a = a';
-    elseif sd(1,1) == 1
+    end
+    if sd(1,1) == 1
         d = d';
-    elseif sal(1,1) == 1
+    end
+    if sal(1,1) == 1
         alpha = alpha';
-    elseif st(1,1) == 1
+    end
+    if st(1,1) == 1
         theta = theta';
-    elseif sll(1,1) == 1
-        link_lens = link_lens';
+    end
+    if sll(1,1) == 1
+        linklens = linklens';
     end
     for i = 1:1:length(Jl)
         if strcmpi(Jl(i,1),'R')
             theta(i,1) = q(i,1);
         elseif strcmpi(Jl(i,1),'P')
-            if alpha(i,1) ~= 0
-                if i-1 >= 1
-                    if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                        a(i,1) = q(i,1) + link_lens(i,1);
-                    elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                        d(i,1) = q(i,1) + link_lens(i,1);
-                    end
-                elseif i == 0
-                    if i+1 < length(Jl)
-                        if alpha(i+1,1) ~= 0
-                            if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                                a(i,1) = q(i,1) + link_lens(i,1);
-                            elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                                d(i,1) = q(i,1) + link_lens(i,1);
-                            end
-                        elseif alpha(i+1,1) == 0
-                            if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                                d(i,1) = q(i,1) + link_lens(i,1);
-                            elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                                a(i,1) = q(i,1) + link_lens(i,1);
-                            end
-                        end
-                    end
-                end
-            elseif alpha(i,1) == 0
-                if i-1 >= 1
-                    if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                        d(i,1) = q(i,1) + link_lens(i,1);
-                    elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                        a(i,1) = q(i,1) + link_lens(i,1);
-                    end
-                elseif i-1 < 1
-                    if i+1 < length(Jl)
-                        if alpha(i+1,1) ~= 0
-                            if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                                d(i,1) = q(i,1) + link_lens(i,1);
-                            elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                                a(i,1) = q(i,1) + link_lens(i,1);
-                            end
-                        elseif alpha(i+1,1) == 0
-                            if a(i-1,1) ~= 0 && d(i-1,1) == 0
-                                a(i,1) = q(i,1) + link_lens(i,1);
-                            elseif a(i-1,1) == 0 && d(i-1,1) ~= 0
-                                d(i,1) = q(i,1) + link_lens(i,1);
-                            end
-                        end
-                    end
-                end
-            end
+            d(i,1) = (cos(alpha(i,1)))*(q(i,1) + linklens(i,1));
         end
     end
+    new_dh = [a d alpha theta];
 end
-new_dh = [a d alpha theta];
 end
 
 function Jllis = get_type_of_joints(dh)
