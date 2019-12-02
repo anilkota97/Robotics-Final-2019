@@ -1,14 +1,14 @@
 clc; close all;
 disp('Enter the following in matrix form:');
 fprintf('\n\t(Note: Enter the initial configuration of the arm\n\t DO NOT ENTER CONSTANTS OR VARIABLES AS SYMBOLS!)\n');
-a = [3 3 0 0];%input('Enter the "a" values of the DH parameter table: ');
-d = [0 0 -5 0];%input('Enter the "d" values of the DH parameter table: ');
-alpha = [0 0 pi 0];%input('Enter the "\alpha" values of the DH parameter table: ');
-theta = [pi/4 pi/2 0 -pi];%input('Enter the "\theta" values of the DH parameter table: ');
+a = [3 3 3];%input('Enter the "a" values of the DH parameter table: ');
+d = [0 0 0];%input('Enter the "d" values of the DH parameter table: ');
+alpha = [0 0 0];%input('Enter the "\alpha" values of the DH parameter table: ');
+theta = [pi/2 pi/4 pi/6];%input('Enter the "\theta" values of the DH parameter table: ');
 ll = [3 3 0 3];%input('Enter the link lengths of the arm: ');
-q_mins = [-pi -pi/2 0 -pi];%input('Enter the "\theta" values of the DH parameter table: ');
-q_maxes = [pi pi/2 5 pi];%input('Enter the "\theta" values of the DH parameter table: ');
-workspace(a,d,alpha,theta,q_mins,q_maxes,ll,'display');
+q_mins = [-pi/2 -pi/4 -pi/6];%input('Enter the "\theta" values of the DH parameter table: ');
+q_maxes = [pi/2 pi/4 pi/6];%input('Enter the "\theta" values of the DH parameter table: ');
+workspace(a,d,alpha,theta,q_mins,q_maxes,ll,'draw');
 
 function workspace(a,d,alpha,theta,qmins,qmaxes,linklens,ret_type)
 if isempty(a)
@@ -129,40 +129,40 @@ else
     values_to_sub_in_z = zeros(length(theta),1);
     for i = 1:1:length(variables_in_x)
         for j = 1:1:length(theta)
-            if variables_in_x(j) == sym_a(j)
-                values_to_sub_in_x(j) = a(j);
-            elseif variables_in_x(j) == sym_d(j)
-                values_to_sub_in_x(j) = d(j);
-            elseif variables_in_x(j) == sym_alpha(j)
-                values_to_sub_in_x(j) = alpha(j);
-            elseif variables_in_x(j) == sym_theta(j)
-                values_to_sub_in_x(j) = theta(j);
+            if variables_in_x(i) == sym_a(j)
+                values_to_sub_in_x(i) = a(j);
+            elseif variables_in_x(i) == sym_d(j)
+                values_to_sub_in_x(i) = d(j);
+            elseif variables_in_x(i) == sym_alpha(j)
+                values_to_sub_in_x(i) = alpha(j);
+            elseif variables_in_x(i) == sym_theta(j)
+                values_to_sub_in_x(i) = theta(j);
             end
         end
     end
     for i = 1:1:length(variables_in_y)
         for j = 1:1:length(theta)
-            if variables_in_y(j) == sym_a(j)
-                values_to_sub_in_y(j) = a(j);
-            elseif variables_in_y(j) == sym_d(j)
-                values_to_sub_in_y(j) = d(j);
-            elseif variables_in_y(j) == sym_alpha(j)
-                values_to_sub_in_y(j) = alpha(j);
-            elseif variables_in_y(j) == sym_theta(j)
-                values_to_sub_in_y(j) = theta(j);
+            if variables_in_y(i) == sym_a(j)
+                values_to_sub_in_y(i) = a(j);
+            elseif variables_in_y(i) == sym_d(j)
+                values_to_sub_in_y(i) = d(j);
+            elseif variables_in_y(i) == sym_alpha(j)
+                values_to_sub_in_y(i) = alpha(j);
+            elseif variables_in_y(i) == sym_theta(j)
+                values_to_sub_in_y(i) = theta(j);
             end
         end
     end
     for i = 1:1:length(variables_in_z)
         for j = 1:1:length(theta)
-            if variables_in_z(j) == sym_a(j)
-                values_to_sub_in_z(j) = a(j);
-            elseif variables_in_z(j) == sym_d(j)
-                values_to_sub_in_z(j) = d(j);
-            elseif variables_in_z(j) == sym_alpha(j)
-                values_to_sub_in_z(j) = alpha(j);
-            elseif variables_in_z(j) == sym_theta(j)
-                values_to_sub_in_z(j) = theta(j);
+            if variables_in_z(i) == sym_a(j)
+                values_to_sub_in_z(i) = a(j);
+            elseif variables_in_z(i) == sym_d(j)
+                values_to_sub_in_z(i) = d(j);
+            elseif variables_in_z(i) == sym_alpha(j)
+                values_to_sub_in_z(i) = alpha(j);
+            elseif variables_in_z(i) == sym_theta(j)
+                values_to_sub_in_z(i) = theta(j);
             end
         end
     end
