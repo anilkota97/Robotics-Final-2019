@@ -54,14 +54,14 @@ for i = 1:numJoints
 %-------Assign the z axis vector
         z_i = zAxis(:,:,i);
         
-        fprintf('The Z axis is:\n')
-        disp(z_i)
+%         fprintf('The Z axis is:\n')
+%         disp(z_i)
         
 %-------Find the common normal
         cn = cross(z_i,prevZ);
         
-        fprintf('The common normal is:\n')
-        disp(cn)
+%         fprintf('The common normal is:\n')
+%         disp(cn)
         
 %-------Find the X axis
         if(sum(cn) == 0)
@@ -84,8 +84,8 @@ for i = 1:numJoints
             
         end
         
-        fprintf('The X axis was assigned to be:\n')
-        disp(x_i)
+%         fprintf('The X axis was assigned to be:\n')
+%         disp(x_i)
         
 %-------Find Y_i
         y_i = cross(z_i,x_i);
@@ -127,8 +127,8 @@ for i = 1:numJoints
             symDH = subs(symDH,symDH(i-1,1),0);
         end
         
-        fprintf('A was assigned to be: \n')
-        disp(symDH(i-1,1))        
+%         fprintf('A was assigned to be: \n')
+%         disp(symDH(i-1,1))        
         
         
         
@@ -173,8 +173,8 @@ for i = 1:numJoints
             symDH = subs(symDH,symDH(i-1,2),linkLengths(i));
         end
             
-        fprintf('D was assigned to be: \n')
-        disp(symDH(i-1,2))
+%         fprintf('D was assigned to be: \n')
+%         disp(symDH(i-1,2))
                 
 %----------------Finding Alpha
         %alpha is zero if the axes are parallel
@@ -189,7 +189,7 @@ for i = 1:numJoints
             symDH = subs(symDH,symDH(i-1,3),acosd(ca));
         end
         
-        fprintf('Alpha was assigned to be: %d\n', symDH(i-1,3))
+%         fprintf('Alpha was assigned to be: %d\n', symDH(i-1,3))
         
 
 %----------------Finding Theta        
@@ -206,8 +206,8 @@ for i = 1:numJoints
             %continue
         end
         
-        fprintf('Theta was chosen to be: \n')
-        disp(symDH(i-1,4));
+%         fprintf('Theta was chosen to be: \n')
+%         disp(symDH(i-1,4));
         
         %Update the previous values with the new values
         prevZ = z_i;
