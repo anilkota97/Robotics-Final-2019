@@ -1,58 +1,30 @@
-function [T,symT] = genTransforms(a,d,alpha,theta)
+function T = genTransforms(numJoints, jointTypes, linkLengths, zAxis, linkDir)
 %UNTITLED6 Generate Transformation matrices from DH parameters
 %   Detailed explanation goes here
 
-T = zeros(4,4,length(a));
-A = zeros(size(T));
-
-for i = 1:length(a)
-    %Create the series of A matrices for the transforms
-    A(:,:,i) = [cosd(theta(i)), -sind(theta(i))*cosd(alpha(i)), sind(theta(i))*sind(alpha(i)), a(i)*cosd(theta(i));
-        sind(theta(i)), cosd(theta(i))*cosd(alpha(i)), -cosd(theta(i))*sind(alpha(i)), a(1)*sind(theta(i));
-        0 sind(alpha(i)), cosd(alpha(i)), d(i); 0 0 0 1];
-end
-
-%Create a symbollic matrix
-symTheta = sym('Theta',[1, length(a)]);
-symTheta = transpose(symTheta);
-symD = sym('D',[1,length(a)]);
-symD = transpose(symD);
-%Create a symbollic DH matrix
-symA = sym('a',[1 length(a)]);
-symA = transpose(symA);
-symAlpha = sym('alpha', [1 length(a)]);
-symAlpha = transpose(symAlpha);
-
-for i = 1:length(a)
-    symAmat(:,:,i) = [cosd(symTheta(i)), -sind(symTheta(i))*cosd(symAlpha(i)), sind(symTheta(i))*sind(symAlpha(i)), symA(i)*cosd(symTheta(i));
-        sind(symTheta(i)), cosd(symTheta(i))*cosd(symAlpha(i)), -cosd(symTheta(i))*sind(symAlpha(i)), symA(1)*sind(symTheta(i));
-        0 sind(symAlpha(i)), cosd(symAlpha(i)), symD(i); 0 0 0 1];
-end
-
-
-
-
-%Create a starting matrix holding the first transformation matrix
-prev = A(:,:,1);
-prevsym = symAmat(:,:,1);
-
-for i = 1:length(a)
+    [symDH] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis, linkDir);
     
-    if(i == 1)
-        T(:,:,i) = prev;
-        symT(:,:,i) = prevsym;
-    else 
-        %Find the transformation matrix up to the current joint
-        T(:,:,i) = prev*A(:,:,i);
-        symT(:,:,i) = prevsym*symAmat(:,:,i);
-        %Update the holder for the previous transformation matrix
-        prev = T(:,:,i);
-        prevsym = symT(:,:,i);
-
+    % A contains the transformation matrices between successive frames(confirm if alpha,theta are in radians in symDH)
+    A = sym(zeros(4,4,numJoints-1));
+    for i = 1:numJoints-1
+        A(:,:,i) = [cosd(symDH(i,4)), -sind(symDH(i,4))*cosd(symDH(i,3)), sind(symDH(i,4))*sind(symDH(i,3)), symDH(i,1)*cosd(symDH(i,4));
+                    sind(symDH(i,4)), cosd(symDH(i,4))*cosd(symDH(i,3)), -cosd(symDH(i,4))*sind(symDH(i,3)), symDH(1,1)*sind(symDH(i,4));
+                    0, sind(symDH(i,3)), cosd(symDH(i,3)), symDH(i,2); 
+                    0, 0, 0, 1];
     end
-end
+    
+    % T contains the transformation matrices of frames w.r.t the base frame 
+    T = sym(zeros(4,4,numJoints-1));
+    prev = A(:,:,1);
+    for i = 1:numJoints-1
+        if i == 1
+            T(:,:,i) = prev;
+        else
+            T(:,:,i) = prev * A(:,:,i);
+            prev = T(:,:,i);
+        end
+    end
                 
 
 
 end
-
