@@ -3,7 +3,7 @@ function [sing,symv, Ve, Jold] = forwardDiffKin(a, d, alpha, theta, jointTypes, 
 %   Detailed explanation goes here
 
 %Generate the set of transformation matricies for the entire robot
-[T, symTmat] = genTransforms(a,d,alpha,theta);
+[T, symTmat] = genTransforms2(a,d,alpha,theta);
 
 %Generate the Jacobian matrix from the transforms
 [J, symJ] = GenerateJacobian(T,jointTypes, symTmat);
