@@ -14,6 +14,14 @@ Jold = J;
 %Make the matrix square
 temp = size(J);
 numCol = temp(2);
+numrow = temp(1);
+
+symA = sym('a',[1 numCol]);
+symAlpha = sym('alpha',[1 numCol]);
+for i = 1:numCol
+    symJ = subs(symJ,symA(i),a(i));
+    symJ = subs(symJ,symAlpha(i),alpha(i)*(180/pi));
+end
 
 colTracker = zeros(1,numCol);
 rowtracker = zeros(1,6);
