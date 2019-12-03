@@ -1,5 +1,13 @@
 clc; close all;
-inverse_diff_kine_using_jacobian(pd,phid,tmax,numJoints, jointTypes, linkLengths, zAxis, linkDir,linklens)
+pd = '[0.25*(1-cos(pi*t)) 0.25*(2+sin(pi*t)) 0]';
+phid = '[0 0 sin(pi*t/24)]';
+tmax = 4;
+numJoints = 3;
+jointTypes = ['RRRE'];
+linkLengths = [0.5 0.5 0.5];
+xAxis = [];
+
+inverse_diff_kine_using_jacobian(pd,phid,tmax,numJoints, jointTypes, linkLengths, zAxis, linkDir)
 function inverse_diff_kine_using_jacobian(pd,phid,tmax,numJoints, jointTypes, linkLengths, zAxis, linkDir)
 if isempty(pd)
     disp('pd matrix is empty !!');
@@ -112,10 +120,10 @@ for i = 1:1:length(pv)
             d(i) = q(i);
         end
     end
-    for i = 1:1:length(variables)
-        if variables(i) == sym_theta(i)
+    for j = 1:1:length(variables)
+        if variables(i) == sym_theta(j)
             values(i) = theta(i);
-        elseif variables(i) == sym_d(i)
+        elseif variables(i) == sym_d(j)
             values(i) = d(i);
     end
     sub_eqn = subs(exp_to_sub,variables,values);
