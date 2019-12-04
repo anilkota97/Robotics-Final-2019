@@ -219,7 +219,7 @@ function [symDH] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis, li
 %Assign the variables to symbolic parameters
 symThetas = sym('Theta',[1, numJoints-1]);
 symThetas = transpose(symThetas);
-symD = sym('D',[1,numJoints-1]);
+symD = sym('d',[1,numJoints-1]);
 symD = transpose(symD);
 %Create a symbollic DH matrix
 symA = sym('a',[1 numJoints-1]);
