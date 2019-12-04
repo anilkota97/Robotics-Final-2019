@@ -1,12 +1,12 @@
-% clc; close all;
-% numJoints = 4;
-% jointTypes = ['RRRE'];
-% linkLengths = [1 1 1];
-% zAxis(:,:,1) = [0 0 1]';zAxis(:,1,2) = [0 0 1]';zAxis(:,1,3) = [0 0 1]';zAxis(:,1,4) = [0 0 1]';
-% linkDir(:,1,1) = [1 0 0]';linkDir(:,1,2) = [1 0 0]';linkDir(:,1,3) = [1 0 0]';
-% q_mins = [-90 -60 -45];
-% q_maxes = [90 60 45];
-% workspace(numJoints, jointTypes, linkLengths, zAxis, linkDir, q_mins, q_maxes, 'draw');
+clc; close all;
+numJoints = 4;
+jointTypes = ['RRRE'];
+linkLengths = [1 1 1];
+zAxis(:,:,1) = [0 0 1]';zAxis(:,1,2) = [0 0 1]';zAxis(:,1,3) = [0 0 1]';zAxis(:,1,4) = [0 0 1]';
+linkDir(:,1,1) = [1 0 0]';linkDir(:,1,2) = [1 0 0]';linkDir(:,1,3) = [1 0 0]';
+q_mins = [-90 -60 -45];
+q_maxes = [90 60 45];
+workspace(numJoints, jointTypes, linkLengths, zAxis, linkDir, q_mins, q_maxes, 'draw');
 
 function workspace(numJoints, jointTypes, linkLengths, zAxis, linkDir, qmins, qmaxes, ret_type)
 if isempty(qmins)
@@ -67,18 +67,58 @@ else
         [x,y,z] = get_coordinates(dh,X,Y,Z);
         ws = [x y z];
         count = 1; q = qmin;
-        while count <= length(min(qmin):resolution:max(qmax))
-            for i = 1:1:length(q)
-                if q(i,1)+resolution <= qmax(i,1)
-                    q(i,1) = q(i,1)+resolution;
-                elseif q(i,1)+resolution > qmax(i,1)
-                    q(i,1) = qmax(i,1);
+        for s = 1:1:length(q)
+            while count <= length(min(qmin):resolution:max(qmax))
+                if s == 1
+                    for i = 1:1:length(q)
+                        if q(i,1)+resolution <= qmax(i,1)
+                            q(i,1) = q(i,1)+resolution;
+                        elseif q(i,1)+resolution > qmax(i,1)
+                            q(i,1) = qmax(i,1);
+                        end
+                    end
+                    dh = update_dh(sym_dh, q, jointTypes);
+                    [x,y,z] = get_coordinates(dh,X,Y,Z);
+                    ws = [ws;x y z];
+                    count = count + 1;
                 end
             end
-            dh = update_dh(sym_dh, q, jointTypes);
-            [x,y,z] = get_coordinates(dh,X,Y,Z);
-            ws = [ws;x y z];
-            count = count + 1;
+            count = 0;
+            if s ~= 1
+                for cc = 1:1:s-1
+                    q(cc,1) = qmin(cc,1);
+                end
+                while count <= length(min(qmin):resolution:max(qmax))
+                    for i = s:1:length(q)
+                        if q(i,1)+resolution <= qmax(i,1)
+                            q(i,1) = q(i,1)+resolution;
+                        elseif q(i,1)+resolution > qmax(i,1)
+                            q(i,1) = qmax(i,1);
+                        end
+                    end
+                    dh = update_dh(sym_dh, q, jointTypes);
+                    [x,y,z] = get_coordinates(dh,X,Y,Z);
+                    ws = [ws;x y z];
+                    count = count + 1;
+                end
+                count = 0;
+                for cc = 1:1:s-1
+                    q(cc,1) = qmax(cc,1);
+                end
+                while count <= length(min(qmin):resolution:max(qmax))
+                    for i = s:1:length(q)
+                        if q(i,1)+resolution <= qmax(i,1)
+                            q(i,1) = q(i,1)+resolution;
+                        elseif q(i,1)+resolution > qmax(i,1)
+                            q(i,1) = qmax(i,1);
+                        end
+                    end
+                    dh = update_dh(sym_dh, q, jointTypes);
+                    [x,y,z] = get_coordinates(dh,X,Y,Z);
+                    ws = [ws;x y z];
+                    count = count + 1;
+                end
+            end
         end
     end
 end
@@ -219,7 +259,7 @@ function [symDH] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis, li
 %Assign the variables to symbolic parameters
 symThetas = sym('Theta',[1, numJoints-1]);
 symThetas = transpose(symThetas);
-symD = sym('d',[1,numJoints-1]);
+symD = sym('D',[1,numJoints-1]);
 symD = transpose(symD);
 %Create a symbollic DH matrix
 symA = sym('a',[1 numJoints-1]);
