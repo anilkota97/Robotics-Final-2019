@@ -80,7 +80,10 @@ else
         q(:,i+1) = q(:,i) + qdot * step;
         tval = tval + step;
     end
+    fprintf('\nThe joint angles matrix at the end of %.4f secs is:\n',tmax);
     disp(q(:,end));
+    fprintf('\nThe time differential of the joint angles matrix at the end of %.4f secs is:\n',tmax);
+    disp(qdot);
 end
 end
 
