@@ -19,7 +19,7 @@ elseif isempty(tmax)
 elseif isempty(linkLengths)
     disp('linklengths matrix is empty !!');
 else
-    step = 2;
+    step = 1;
     iter = 0:step:tmax;
     syms t; tval = 0;
     
@@ -33,12 +33,7 @@ else
     
     q = zeros((length(pd)+length(phid)),length(iter));
     K = eye((length(pd)+length(phid)));
-    
-    % Obtaining the initial configuration
-    init_joint_config = [pd;phid];
-    init_joint_config_ = subs(init_joint_config,t,0);
-    q(:,1) = double(init_joint_config_);
-    
+      
     % Obtaining the initial Position and Rotation of end effector
     T = genTransforms(numJoints, jointTypes, linkLengths, zAxis, linkDir);
     pos = T(1:3,end,end);
@@ -53,13 +48,19 @@ else
             pv = [pv;Pv(i)];
         end
     end
+    disp(pv);
+    % Obtaining the initial configuration
+    init_joint_config = [pd;phid];
+    init_joint_config_ = subs(init_joint_config,t,0);
+    init_joint_config__ = double(init_joint_config_);
+    q(:,1) = init_joint_config__;
         
     for i = 1:length(iter)
         %Getting the forward kinematics for the robot
-        xe(:,i)= get_ee_fkine(pv, q(:,1), jointTypes);
+        xe(:,i)= get_ee_fkine(pv, q(:,i), jointTypes);
                 
         % Getting the analytical jacobian
-        Ja = get_analytical_jacobian(pv, q(:,1), jointTypes);
+        Ja = get_analytical_jacobian(pv, q(:,i), jointTypes);
         
         % substituting the tvalues in the following
         pd__(:,i) = subs(pd(:,1),tval);
@@ -97,7 +98,7 @@ for i = 1:1:length(pv)
     sym_d = sym('d', [1,length(jointTypes)-1]);
     theta = zeros(1,length(sym_theta));
     d = zeros(1,length(sym_d));
-    for j = 1:1:length(jointTypes)-1
+    for j = 1:1:length(sym_theta)
         if strcmpi(jointTypes(j),'R')
             theta(j) = q(j);
         elseif strcmpi(jointTypes(j),'P')
@@ -210,7 +211,7 @@ function [symDH] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis, li
 %Assign the variables to symbolic parameters
 symThetas = sym('Theta',[1, numJoints-1]);
 symThetas = transpose(symThetas);
-symD = sym('D',[1,numJoints-1]);
+symD = sym('d',[1,numJoints-1]);
 symD = transpose(symD);
 %Create a symbollic DH matrix
 symA = sym('a',[1 numJoints-1]);
