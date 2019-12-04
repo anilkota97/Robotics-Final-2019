@@ -54,8 +54,8 @@ else
     X_Coordinates = ws_mat(:,1); Y_Coordinates = ws_mat(:,2); Z_Coordinates = ws_mat(:,3);
     if strcmpi(ret_type,'draw')
         grid on; hold on;
-        scale = 1; [xc, yc, zc] = sphere();
-        surface(scale.*xc, scale.*yc, scale.*zc,'EdgeColor','none','FaceColor','red');
+        [xc, yc, zc] = cylinder([0.2 0.5]);
+        surface(xc, yc, zc,'EdgeColor','none','FaceColor','red');
         plot3(X_Coordinates,Y_Coordinates,Z_Coordinates,'k*','LineWidth',3);
         xlabel('X-AXIS');ylabel('Y-AXIS');zlabel('Z-AXIS');
         title('WORKSPACE OF THE MANIPULATOR / ARM');
