@@ -53,7 +53,7 @@ elseif isempty(qmax)
 elseif isempty(linklen)
     disp('The matrix containing link lengths is empty !!');
 else
-    resolution = 1;
+    resolution = 10;
     qminsi = size(qmin); qmaxs = size(qmax);
     if qminsi(1,1) == 1
         qmin = qmin';
@@ -88,6 +88,7 @@ else
                 for cc = 1:1:s-1
                     q(cc,1) = qmin(cc,1);
                 end
+                q(s:end,1) = qmin(s:end,1);
                 while count <= length(min(qmin):resolution:max(qmax))
                     for i = s:1:length(q)
                         if q(i,1)+resolution <= qmax(i,1)
@@ -105,6 +106,7 @@ else
                 for cc = 1:1:s-1
                     q(cc,1) = qmax(cc,1);
                 end
+                q(s:end,1) = qmax(s:end,1);
                 while count <= length(min(qmin):resolution:max(qmax))
                     for i = s:1:length(q)
                         if q(i,1)+resolution <= qmax(i,1)
