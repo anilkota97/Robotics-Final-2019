@@ -1,11 +1,12 @@
 clc; close all;
-pd = '[0.25*(1-cos(pi*t)) 0.25*(2+sin(pi*t)) 0]';
-phid = '[0 0 sin(pi*t/24)]';
+pd = '[0.25*(1-cos(pi*t)) 0.25*(2+sin(pi*t))]';
+phid = '[sin(pi*t/24)]';
 tmax = 4;
-numJoints = 3;
+numJoints = 4;
 jointTypes = ['RRRE'];
 linkLengths = [0.5 0.5 0.5];
-xAxis = [];
+zAxis(:,:,1) = [0 0 1]';zAxis(:,:,2) = [0 0 1]';zAxis(:,:,3) = [0 0 1]';zAxis(:,:,4) = [0 0 1]';
+linkDir(:,:,1) = [1 0 0]';linkDir(:,:,2) = [1 0 0]';linkDir(:,:,3) = [1 0 0]';
 
 inverse_diff_kine_using_jacobian(pd,phid,tmax,numJoints, jointTypes, linkLengths, zAxis, linkDir)
 function inverse_diff_kine_using_jacobian(pd,phid,tmax,numJoints, jointTypes, linkLengths, zAxis, linkDir)
@@ -15,33 +16,9 @@ elseif isempty(phid)
     disp('phid matrix is empty !!');
 elseif isempty(tmax)
     disp('Maximum time is empty !!');
-elseif isempty(a)
-    disp('a matrix of DH parameters table is empty !!');
-elseif isempty(d)
-    disp('d matrix of DH parameters table is empty !!');
-elseif isempty(alpha)
-    disp('alpha matrix of DH parameters table is empty !!');
-elseif isempty(theta)
-    disp('theta matrix of DH parameters table is empty !!');
 elseif isempty(linkLengths)
     disp('linklengths matrix is empty !!');
 else
-    size_of_a = size(a); size_of_d = size(d);
-    size_of_alpha = size(alpha); size_of_theta = size(theta);
-    if size_of_a(1,1) == 1
-        a = a';
-    end
-    if size_of_d(1,1) == 1
-        d = d';
-    end
-    if size_of_alpha(1,1) == 1
-        alpha = alpha';
-    end
-    if size_of_theta(1,1) == 1
-        theta = theta';
-    end
-    
-    [dh] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis, linkDir);
     step = 2;
     iter = 0:step:tmax;
     syms t; tval = 0;
@@ -70,15 +47,19 @@ else
     angle_theta = atan2(-R(3,1),real(sqrt((R(3,2)^2) + (R(3,3)^2))));
     angle_psi = atan2(R(2,1),R(1,1));
     rot = [angle_phi;angle_theta;angle_psi];
-    Pv = [pos;rot];
-    
-    
+    Pv = [pos;rot]; pv = [];
+    for i = 1:1:length(Pv)
+        if Pv(i) ~= 0
+            pv = [pv;Pv(i)];
+        end
+    end
+        
     for i = 1:length(iter)
         %Getting the forward kinematics for the robot
-        xe(:,i)= get_ee_fkine(Pv, q(:,1), jointTypes);
-        
+        xe(:,i)= get_ee_fkine(pv, q(:,1), jointTypes);
+                
         % Getting the analytical jacobian
-        Ja = get_analytical_jacobian(Pv, q(:,1), jointTypes);
+        Ja = get_analytical_jacobian(pv, q(:,1), jointTypes);
         
         % substituting the tvalues in the following
         pd__(:,i) = subs(pd(:,1),tval);
@@ -99,7 +80,7 @@ else
         q(:,i+1) = q(:,i) + qdot * step;
         tval = tval + step;
     end
-    %     disp(q(:,end));
+    disp(q(:,end));
 end
 end
 
@@ -109,22 +90,25 @@ for i = 1:1:length(pv)
     exp_to_sub = pv(i);
     variables = symvar(exp_to_sub);
     values = zeros(1,length(variables));
-    theta = zeros(1,length(variables));
-    d = zeros(1,length(variables));
-    sym_theta = sym('theta', [1,length(theta)]);
-    sym_d = sym('d', [1,length(d)]);
-    for j = 1:1:length(jointTypes)
+    sym_theta = sym('Theta', [1,length(jointTypes)-1]);
+    sym_d = sym('d', [1,length(jointTypes)-1]);
+    theta = zeros(1,length(sym_theta));
+    d = zeros(1,length(sym_d));
+    for j = 1:1:length(jointTypes)-1
         if strcmpi(jointTypes(j),'R')
-            theta(i) = q(i);
+            theta(j) = q(j);
         elseif strcmpi(jointTypes(j),'P')
-            d(i) = q(i);
+            d(j) = q(j);
         end
     end
-    for j = 1:1:length(variables)
-        if variables(i) == sym_theta(j)
-            values(i) = theta(i);
-        elseif variables(i) == sym_d(j)
-            values(i) = d(i);
+    for k1 = 1:1:length(variables)
+        for k2 = 1:1:length(sym_theta)
+            if isequaln(variables(k1), sym_theta(k2))
+                values(k1) = theta(k2);
+            elseif isequaln(variables(k1), sym_d(k2))
+                values(k1) = d(k2);
+            end
+        end
     end
     sub_eqn = subs(exp_to_sub,variables,values);
     sub_eqn_ = double(sub_eqn);
@@ -133,101 +117,68 @@ end
 end
 
 function J = get_analytical_jacobian(Pv, q, jointTypes)
-if isempty(dh)
-    disp('The DH Matrix is empty !!');
-else
-    sym_theta = sym('theta',[length(dh(:,4)),1],'rational');
-    for i = 1:1:length(dh(:,4))
-        if strcmpi(type_of_joint(i),'R')
-            differential = [zeros(length(Pv)-1,1);1];
-        elseif strcmpi(type_of_joint(i),'P')
-            differential = zeros(length(Pv),1);
-        end
-        var_list = symvar(Pv);
-        theta_in_var_list = false;
-        for j = 1:1:length(var_list)
-            if sym_theta(i,1) == var_list(j)
-                theta_in_var_list = true;
-                break;
-            end
-        end
-        if theta_in_var_list
-            differential = diff(Pv,sym_theta(i,1));
-        end
-        if i == 1
-            J = differential;
-        else
-            J = [J differential];
+sym_theta = sym('Theta',[length(jointTypes),1],'rational');
+for i = 1:1:length(jointTypes) - 1
+    if strcmpi(jointTypes(i),'R')
+        differential = [zeros(length(Pv)-1,1);1];
+    elseif strcmpi(jointTypes(i),'P')
+        differential = zeros(length(Pv),1);
+    end
+    var_list = symvar(Pv);
+    theta_in_var_list = false;
+    for j = 1:1:length(var_list)
+        if isequaln(sym_theta(i,1), var_list(j))
+            theta_in_var_list = true;
+            break;
         end
     end
-    J = substitute_values_in_jacobian(J, q, jointTypes);
+    if theta_in_var_list
+        differential = diff(Pv,sym_theta(i,1));
+    end
+    if i == 1
+        J = differential;
+    else
+        J = [J differential];
+    end
 end
+% size_of_J = size(J); modJ = [];
+% for i = 1:1:length(size_of_J(1,1))
+%     for j = 1:1:length(size_of_J(1,2))
+%         if isequaln(J(i,j),0)
+%             continue;
+%         else
+%             modJ(i,j) = J(i,j);
+%         end
+%     end
+% end
+% disp(modJ);
+J = substitute_values_in_jacobian(J, q, jointTypes);
 end
 
-function J = substitute_values_in_jacobian(symb_J, q, jointTypes)
+function modJ = substitute_values_in_jacobian(symb_J, q, jointTypes)
 if isempty(symb_J)
     disp('The symbolic Jacobian is empty !!');
 else
-    J = symb_J;
-    for col = 1:1:symb_J(1,:)
-        substituted_col = get_ee_fkine(symb_J(:,col), q, jointTypes);
-        J(:,col) = substituted_col;
+    [m,n] = size(symb_J);
+    for i = 1:1:n
+        substituted_col = get_ee_fkine(symb_J(:,i), q, jointTypes);
+        if i == 1
+            J = substituted_col;
+        else
+            J = [J substituted_col];
+        end
     end
-%     a = dh(:,1); d = dh(:,2); alpha = dh(:,3); theta = dh(:,4);
-%     sym_a = sym('a',[length(a),1],'rational');
-%     sym_d = sym('d',[length(d),1],'rational');
-%     sym_alpha = sym('alpha',[length(alpha),1],'rational');
-%     sym_theta = sym('theta',[length(theta),1],'rational');
-%     [m,n] = size(symb_J);
-%     row_after_which_there_are_no_zeros = 2;
-%     J = zeros(m,n); rows_to_remove = [];
-%     for i = 1:1:m
-%         logic_count = 0;
-%         for j = 1:1:n
-%             eqn_to_sub = symb_J(i,j);
-%             variables_in_eqn = symvar(eqn_to_sub);
-%             values_to_sub = zeros(1,length(variables_in_eqn));
-%             for k1 = 1:1:length(variables_in_eqn)
-%                 for k2 = 1:1:length(theta)
-%                     if variables_in_eqn(k1) == sym_a(k2)
-%                         values_to_sub(k1) = a(k2);
-%                         break;
-%                     elseif variables_in_eqn(k1) == sym_d(k2)
-%                         values_to_sub(k1) = d(k2);
-%                         break;
-%                     elseif variables_in_eqn(k1) == sym_alpha(k2)
-%                         values_to_sub(k1) = alpha(k2);
-%                         break;
-%                     elseif variables_in_eqn(k1) == sym_theta(k2)
-%                         values_to_sub(k1) = theta(k2);
-%                         break;
-%                     end
-%                 end
-%             end
-%             substituted_eqn = subs(eqn_to_sub,variables_in_eqn,values_to_sub);
-%             substituted_eqn_ = double(substituted_eqn);
-%             J(i,j) = substituted_eqn_;
-%             if i > row_after_which_there_are_no_zeros
-%                 if J(i,j) == 0
-%                     logic_count = logic_count + 1;
-%                 end
-%             end
-%         end
-%         % logic for recording which row to delete
-%         if i > row_after_which_there_are_no_zeros
-%             if logic_count == length(J(i,:))
-%                 rows_to_remove = [rows_to_remove i];
-%             end
-%         end
-%     end
-%     % logic for deleting a row in angles if all are zeros
-%     for i = 1:1:length(rows_to_remove)
-%         offset = 0;
-%         J(rows_to_remove(i) - offset,:) = [];
-%         for j = i+1:1:length(rows_to_remove)
-%             rows_to_remove(j) = rows_to_remove(j) - 1;
-%         end
-%     end
+    modJ = J(1:n-1,:);
+    for i = n:1:m
+        sum = 0;
+        logic_array = J(i,:) == zeros(1,n);
+        for j = 1:1:length(logic_array)
+            sum = sum + logic_array(j);
+        end
+        if sum ~= n
+            modJ = [modJ;J(i,:)];
+        end
+    end
 end
 end
 
@@ -482,42 +433,5 @@ function T = genTransforms(numJoints, jointTypes, linkLengths, zAxis, linkDir)
     end
                 
 
-
-end
-
-function [pos_e, T] = f_kinematics(numJoints, jointTypes, linkLengths, zAxis, linkDir, q)
-[symDH] = calcDHfromRobot(numJoints, jointTypes, linkLengths, zAxis, linkDir);
-
-% Substituting user input joint variables in DH parameters (confirm if numJoints includes end effector or not)
-k = symvar(symDH);
-[rows,cols] = size(symDH);
-for i = 1:rows
-    [row,col] = find(symDH == k(i));
-    symDH(row,col) = q(i);
-end
-
-% A contains the transformation matrices between successive frames(confirm if alpha,theta are in radians in symDH)
-A = sym(zeros(4,4,rows));
-for i = 1:rows
-    A(:,:,i) = [cosd(symDH(i,4)), -sind(symDH(i,4))*cosd(symDH(i,3)), sind(symDH(i,4))*sind(symDH(i,3)), symDH(i,1)*cosd(symDH(i,4));
-        sind(symDH(i,4)), cosd(symDH(i,4))*cosd(symDH(i,3)), -cosd(symDH(i,4))*sind(symDH(i,3)), symDH(1,1)*sind(symDH(i,4));
-        0, sind(symDH(i,3)), cosd(symDH(i,3)), symDH(i,2);
-        0, 0, 0, 1];
-end
-
-% T contains the transformation matrices of frames w.r.t the base frame
-T = sym(zeros(4,4,rows));
-prev = A(:,:,1);
-for i = 1:rows
-    if i == 1
-        T(:,:,i) = prev;
-    else
-        T(:,:,i) = prev * A(:,:,i);
-        prev = T(:,:,i);
-    end
-end
-
-% Finding the end-effector position w.r.t base frame
-pos_e = T(1:3,end,end);
 
 end
