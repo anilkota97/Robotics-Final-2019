@@ -1,12 +1,12 @@
-clc; close all;
-numJoints = 4;
-jointTypes = ['RRRE'];
-linkLengths = [1 1 1];
-zAxis(:,:,1) = [0 0 1]';zAxis(:,1,2) = [0 0 1]';zAxis(:,1,3) = [0 0 1]';zAxis(:,1,4) = [0 0 1]';
-linkDir(:,1,1) = [1 0 0]';linkDir(:,1,2) = [1 0 0]';linkDir(:,1,3) = [1 0 0]';
-q_mins = [-90 -60 -45];
-q_maxes = [90 60 45];
-workspace(numJoints, jointTypes, linkLengths, zAxis, linkDir, q_mins, q_maxes, 'draw');
+% clc; close all;
+% numJoints = 4;
+% jointTypes = ['RRRE'];
+% linkLengths = [1 1 1];
+% zAxis(:,:,1) = [0 0 1]';zAxis(:,1,2) = [0 0 1]';zAxis(:,1,3) = [0 0 1]';zAxis(:,1,4) = [0 0 1]';
+% linkDir(:,1,1) = [1 0 0]';linkDir(:,1,2) = [1 0 0]';linkDir(:,1,3) = [1 0 0]';
+% q_mins = [-90 -60 -45];
+% q_maxes = [90 60 45];
+% workspace(numJoints, jointTypes, linkLengths, zAxis, linkDir, q_mins, q_maxes, 'draw');
 
 function workspace(numJoints, jointTypes, linkLengths, zAxis, linkDir, qmins, qmaxes, ret_type)
 if isempty(qmins)
