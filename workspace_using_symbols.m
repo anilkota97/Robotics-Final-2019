@@ -249,14 +249,14 @@ if isempty(dh)
     disp('The matrix containing DH Parameters is empty !!');
 else
     Jllis = []; a = dh(:,1); d = dh(:,2);
-    thetas = dh(:,4); st = size(thetas);
+    thetas = dh(:,4); st = size(dh(:,4));
     if st(1,1) == 1
         thetas = thetas';
     end
     for i = 1:1:length(thetas)
-        if thetas(i,1) ~= 0
+        if thetas(i,1) ~= 0 && d(i,1) == 0
             Jllis = [Jllis;'R'];
-        elseif thetas(i,1) == 0
+        elseif thetas(i,1) == 0 && (a(i,1) ~= 0 || d(i,1) ~= 0)
             Jllis = [Jllis;'P'];
         end
     end
