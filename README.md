@@ -1,4 +1,4 @@
-# Robotics-Final-2019
+# Robotic Arm Manipulator
 A repository for the Final Project for MAE 547 Robotics
 
 MATLAB Guide tutorial: https://www.youtube.com/watch?v=cl0AcnN3Bmk&t=1640s
